@@ -171,6 +171,7 @@ function createBarrier() {
     mesh.position.y = -0.2;
     mesh.position.z = -2;
 
+
     scene.add(mesh);
     blockCubes.push(mesh);
 
@@ -185,41 +186,61 @@ function createBarrier() {
 }
 
 function createAvatar() {
-    var loader = new THREE.FBXLoader();
 
-    loader.load('assets/models/chicken.fbx', function (object) {
-        object.mixer = new THREE.AnimationMixer(object);
-        mixers.push(object.mixer);
-        var action = object.mixer.clipAction(object.animations[8]);
-        
-        object.traverse(function (child) {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
+    var loader = new THREE.GLTFLoader();
+    loader.load('assets/models/chicken.gltf', function (gltf) {
+        gltf.scene.traverse(function (child) {
+            // if (child.isMesh) {
+            //     child.material.envMap = envMap;
+            // }
         });
+        scene.add(gltf.scene);
+    }, undefined, function (e) {
+        console.error(e);
+    });
 
-        var scale = 0.0004;
+    // var loader = new THREE.FBXLoader();
 
-        action.play();
-        object.position.y = avatarInitYPos;
-        object.position.z = 0.5;
-        object.rotation.y = Math.PI;
+    // loader.load('assets/models/chicken.fbx', function (object) {
+    //     object.mixer = new THREE.AnimationMixer(object);
+    //     mixers.push(object.mixer);
+    //     var action = object.mixer.clipAction(object.animations[8]);
 
-        object.scale.set(scale, scale, scale);
+    //     var skinnedMesh;
 
-        avatar = object;
+    //     object.traverse(function (child) {
+    //         if (child.isMesh) {
+    //             child.castShadow = true;
+    //             child.receiveShadow = true;
+    //         }
+    //         if (child.isSkinnedMesh) {
+    //             skinnedMesh = child;
+    //         }
+    //     });
 
-        scene.add(object);
+    //     var scale = 0.0004;
 
-        initControls();
-        avatarInitiated = true;
-    },
-        null,
-        function (error) {
-            console.log(error);
-        }
-    );
+    //     object.position.y = avatarInitYPos;
+    //     object.position.z = 0.5;
+    //     object.rotation.y = Math.PI;
+
+    //     console.log(skinnedMesh.position);
+    //     action.play();
+    //     console.log(skinnedMesh.position);
+    //     object.scale.set(scale, scale, scale);
+
+    //     avatar = object;
+
+    //     scene.add(object);
+
+    //     initControls();
+    //     avatarInitiated = true;
+    // },
+    //     null,
+    //     function (error) {
+    //         console.log(error);
+    //     }
+    // );
 
 
 
