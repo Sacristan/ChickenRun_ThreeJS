@@ -62,7 +62,7 @@ function buildScene() {
 
 function initControls() {
     orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-    orbitControls.target = avatar.position;
+    if (avatar) orbitControls.target = avatar.position;
 }
 
 function update() {
@@ -189,123 +189,27 @@ function createAvatar() {
 
     var loader = new THREE.GLTFLoader();
     loader.load('assets/models/chicken.gltf', function (gltf) {
-        gltf.scene.traverse(function (child) {
-            // if (child.isMesh) {
-            //     child.material.envMap = envMap;
-            // }
-        });
-        scene.add(gltf.scene);
+        var object = gltf.scene;
+
+        scene.add(object);
+
+        mixer = new THREE.AnimationMixer(object);
+        mixers.push(mixer);
+        var action = mixer.clipAction(gltf.animations[0]);
+        object.position.y = avatarInitYPos;
+        object.position.z = 0.5;
+        object.rotation.y = Math.PI;
+
+        var scale = 0.05;
+        object.scale.set(scale, scale, scale);
+
+        avatar = object;
+        action.play();
+
+        initControls();
     }, undefined, function (e) {
         console.error(e);
     });
-
-    // var loader = new THREE.FBXLoader();
-
-    // loader.load('assets/models/chicken.fbx', function (object) {
-    //     object.mixer = new THREE.AnimationMixer(object);
-    //     mixers.push(object.mixer);
-    //     var action = object.mixer.clipAction(object.animations[8]);
-
-    //     var skinnedMesh;
-
-    //     object.traverse(function (child) {
-    //         if (child.isMesh) {
-    //             child.castShadow = true;
-    //             child.receiveShadow = true;
-    //         }
-    //         if (child.isSkinnedMesh) {
-    //             skinnedMesh = child;
-    //         }
-    //     });
-
-    //     var scale = 0.0004;
-
-    //     object.position.y = avatarInitYPos;
-    //     object.position.z = 0.5;
-    //     object.rotation.y = Math.PI;
-
-    //     console.log(skinnedMesh.position);
-    //     action.play();
-    //     console.log(skinnedMesh.position);
-    //     object.scale.set(scale, scale, scale);
-
-    //     avatar = object;
-
-    //     scene.add(object);
-
-    //     initControls();
-    //     avatarInitiated = true;
-    // },
-    //     null,
-    //     function (error) {
-    //         console.log(error);
-    //     }
-    // );
-
-
-
-    // var loader = new THREE.FBXLoader();
-
-    // loader.load('assets/models/rabbit.fbx', function (object) {
-    //     // object.mixer = new THREE.AnimationMixer(object);
-    //     // mixers.push(object.mixer);
-    //     // var action = object.mixer.clipAction(object.animations[0]);
-    //     // action.play();
-
-    //     var texLoader = new THREE.TextureLoader();
-    //     var tex = texLoader.load('assets/models/skin.jpg');
-
-    //     var material = new THREE.MeshBasicMaterial({
-    //         color: 0xFFFFFF,
-    //         map: tex
-    //     });
-
-    //     applyMaterialTextureSettings(material, ['map'], 1, 1);
-
-    //     object.traverse(function (child) {
-    //         if (child.isMesh && child.name == "Rabbit") {
-    //             // child.castShadow = true;
-    //             // child.receiveShadow = true;
-    //             child.material = material;
-    //         }
-    //     });
-
-    //     var scale = 0.0002;
-
-    //     object.scale.set(scale, scale, scale);
-    //     object.position.y = avatarInitYPos;
-    //     object.position.z = 0.5;
-    //     object.rotation.y = Math.PI;
-
-    //     avatar = object;
-
-    //     scene.add(object);
-
-    //     initControls();
-    //     avatarInitiated = true;
-    // },
-    //     null,
-    //     function (error) {
-    //         console.log(error);
-    //     }
-    // );
-
-    // avatar = scene.getObjectByName("avatar");
-
-    // var geometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-
-    // var material = new THREE.MeshLambertMaterial({
-    //     color: 'rgb(125,125,125)',
-    //     // wireframe: true
-    // });
-
-    // var mesh = new THREE.Mesh(geometry, material);
-    // mesh.castShadow = true;
-    // mesh.position.y = avatarInitYPos;
-    // mesh.position.z = 0.5;
-
-    // scene.add(mesh);
-    // avatar = mesh;
 }
 
 function createBasePlane() {
