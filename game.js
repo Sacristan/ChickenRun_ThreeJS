@@ -8,7 +8,8 @@ var camera,
   orbitControls,
   blockCubes = [],
   animationMixer,
-  clock;
+  clock,
+  canSpawnAdditionalBarriers = true;
 
 var avatarGroup, avatarCollisionBox, avatarAnimationAction;
 
@@ -26,6 +27,10 @@ const avatarModelOffset = -0.09;
 const avatarGroupInitYPos = -0.15;
 const avatarBoxOffset = -0.24;
 const maxJumpYPos = 0.15;
+
+const minDifficultyBarrierSpawnTime = 5000; //ms
+const maxDifficultyBarrierSpawnTime = 1500; //ms
+var difficultyAccumulator = 0;
 
 init();
 initScene();
@@ -74,8 +79,6 @@ function update() {
 
   baseTexture.offset.y -= 0.025;
 
-  if (Math.random() < 0.0025) createBarrier();
-
   blockCubes.forEach(function(barrier) {
     barrier.position.z += 0.01;
   });
@@ -99,6 +102,31 @@ function update() {
   requestAnimationFrame(function() {
     update();
   });
+
+  spawnBarrierUpdate();
+}
+
+function spawnBarrierUpdate() {
+  if (difficultyAccumulator < 1) {
+    difficultyAccumulator += clock.getDelta() / 2;
+  }
+
+  const barierSpawnTimeOut = lerp(
+    minDifficultyBarrierSpawnTime,
+    maxDifficultyBarrierSpawnTime,
+    difficultyAccumulator
+  );
+
+  console.log(barierSpawnTimeOut);
+
+  if (canSpawnAdditionalBarriers && Math.random() < 0.4) {
+    canSpawnAdditionalBarriers = false;
+    createBarrier();
+
+    setTimeout(function() {
+      canSpawnAdditionalBarriers = true;
+    }, barierSpawnTimeOut);
+  }
 }
 
 function onResize() {
@@ -262,9 +290,9 @@ function createBasePlane() {
 
 //PHYSICS
 function checkCollisions() {
-  blockCubes.forEach(function(cube) {
-    cube.material.transparent = false;
-    cube.material.opacity = 1.0;
+  blockCubes.forEach(function(blockCube) {
+    blockCube.material.transparent = false;
+    blockCube.material.opacity = 1.0;
   });
 
   var originPoint = avatarCollisionBox.position.clone();
