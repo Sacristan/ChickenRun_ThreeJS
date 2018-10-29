@@ -117,8 +117,6 @@ function spawnBarrierUpdate() {
     difficultyAccumulator
   );
 
-  console.log(barierSpawnTimeOut);
-
   if (canSpawnAdditionalBarriers && Math.random() < 0.4) {
     canSpawnAdditionalBarriers = false;
     createBarrier();
@@ -220,7 +218,11 @@ function createAvatar() {
     function(gltf) {
       var object = gltf.scene;
 
-      scene.add(object);
+      object.traverse(function(child) {
+        if (child.isMesh) {
+          child.castShadow = true;
+        }
+      });
 
       animationMixer = new THREE.AnimationMixer(object);
       avatarAnimationAction = animationMixer.clipAction(gltf.animations[0]);
