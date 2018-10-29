@@ -76,6 +76,14 @@ function buildScene() {
 function initAvatarControls() {
   orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
   orbitControls.target = avatarGroup.position;
+  orbitControls.minAzimuthAngle = -Math.PI / 2;
+  orbitControls.maxAzimuthAngle = Math.PI / 2;
+
+  orbitControls.minPolarAngle = -Math.PI / 2;
+  orbitControls.maxPolarAngle = Math.PI / 2;
+
+  orbitControls.enableDamping = false;
+  orbitControls.enableZoom = false;
 }
 
 function update() {
