@@ -4,14 +4,13 @@ var camera,
   scene,
   renderer,
   basePlane,
-  avatarCollisionBox,
   baseTexture,
   orbitControls,
   blockCubes = [],
   animationMixer,
-  clock,
-  avatarGroup,
-  avatarAnimationAction;
+  clock;
+
+var avatarGroup, avatarCollisionBox, avatarAnimationAction;
 
 var width, height;
 
@@ -94,8 +93,7 @@ function update() {
     }
 
     orbitControls.update();
-
-    // checkCollisions();
+    if (!isJumping) checkCollisions();
   }
 
   requestAnimationFrame(function() {
@@ -131,7 +129,6 @@ function jump() {
   }
   const y = lerp(avatarGroupInitYPos, maxJumpYPos, t);
   avatarGroup.position.y = y;
-  //   avatarCollisionBox.position.y = y;
   if (Math.round(avatarGroup.position.y * 100) / 100 >= maxJumpYPos) {
     stopAvatarAtInitPos = true;
   }
@@ -171,6 +168,7 @@ function createBarrier() {
   applyMaterialTextureSettings(material, ["map", "bumpMap"], 5, 1);
 
   var mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "blockBarrier_" + blockCubes.length;
   mesh.castShadow = true;
   mesh.position.y = -0.2;
   mesh.position.z = -2;
@@ -230,7 +228,7 @@ function createAvatarCollisionBox() {
   var material = new THREE.MeshBasicMaterial({
     color: 0x00ff00,
     transparent: true,
-    opacity: 0.5
+    opacity: 0
   });
   avatarCollisionBox = new THREE.Mesh(geometry, material);
   avatarGroup.add(avatarCollisionBox);
@@ -269,20 +267,23 @@ function checkCollisions() {
     cube.material.opacity = 1.0;
   });
 
-  var originPoint = avatar.position.clone();
+  var originPoint = avatarCollisionBox.position.clone();
+  originPoint.z += 0.5;
+  originPoint.y += avatarModelOffset;
 
   for (
     var vertexIndex = 0;
-    vertexIndex < avatar.geometry.vertices.length;
+    vertexIndex < avatarCollisionBox.geometry.vertices.length;
     vertexIndex++
   ) {
-    var localVertex = avatar.geometry.vertices[vertexIndex].clone();
-    var globalVertex = localVertex.applyMatrix4(avatar.matrix);
-    var directionVector = globalVertex.sub(avatar.position);
+    var localVertex = avatarCollisionBox.geometry.vertices[vertexIndex].clone();
+    var globalVertex = localVertex.applyMatrix4(avatarCollisionBox.matrix);
+    var directionVector = globalVertex.sub(avatarCollisionBox.position);
     var ray = new THREE.Raycaster(
       originPoint,
       directionVector.clone().normalize()
     );
+
     var collisionResults = ray.intersectObjects(blockCubes);
 
     if (
