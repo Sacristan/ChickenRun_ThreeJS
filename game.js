@@ -7,6 +7,7 @@ var camera,
   baseTexture,
   orbitControls,
   blockCubes = [],
+  fences = [],
   animationMixer,
   clock,
   canSpawnAdditionalBarriers = true;
@@ -27,6 +28,8 @@ const avatarModelOffset = -0.09;
 const avatarGroupInitYPos = -0.15;
 const avatarBoxOffset = -0.24;
 const maxJumpYPos = 0.15;
+const fenceInitZ = -8;
+const fenceReplacementZPos = 2;
 
 const minDifficultyBarrierSpawnTime = 5000; //ms
 const maxDifficultyBarrierSpawnTime = 1500; //ms
@@ -67,6 +70,7 @@ function buildScene() {
   createLights();
   createBasePlane();
   createBarrier();
+  createFences();
 }
 
 function initAvatarControls() {
@@ -78,6 +82,14 @@ function update() {
   renderer.render(scene, camera);
 
   baseTexture.offset.y -= 0.025;
+
+  fences.forEach(function(fence) {
+    fence.position.z += 0.01;
+
+    if (fence.position.z > fenceReplacementZPos) {
+      fence.position.z = fenceInitZ + fenceReplacementZPos;
+    }
+  });
 
   blockCubes.forEach(function(barrier) {
     barrier.position.z += 0.01;
@@ -202,13 +214,7 @@ function createBarrier() {
   scene.add(mesh);
   blockCubes.push(mesh);
 
-  setTimeout(function() {
-    blockCubes = arrayRemove(blockCubes, mesh);
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-    mesh = undefined;
-  }, 5000);
+  cleanupAfter(blockCubes, mesh, 5000);
 }
 
 function createAvatar() {
@@ -250,6 +256,16 @@ function createAvatar() {
       console.error(e);
     }
   );
+}
+
+function cleanupAfter(arr, object, time) {
+  setTimeout(function() {
+    arr = arrayRemove(arr, object);
+    scene.remove(object);
+    object.geometry.dispose();
+    object.material.dispose();
+    object = undefined;
+  }, time);
 }
 
 function createAvatarCollisionBox() {
@@ -350,4 +366,41 @@ function arrayRemove(arr, value) {
 
 function lerp(a, b, c) {
   return a + c * (b - a);
+}
+
+//FENCES
+function createFences() {
+  let z = fenceInitZ;
+
+  for (var i = 0; i < 12; i++) {
+    z += 0.7;
+
+    createFence(true, z);
+    createFence(false, z);
+  }
+}
+
+function createFence(right = true, z) {
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    "assets/models/fences.gltf",
+    function(gltf) {
+      var object = gltf.scene;
+
+      object.rotation.y = Math.PI * 1.5;
+      object.scale.set(0.3, 0.3, 0.3);
+      object.position.x = 0.7 * right ? 1 : -1;
+      object.position.y = -0.25;
+      object.position.z = z;
+
+      fences.push(object);
+
+      scene.add(object);
+      // cleanupAfter(fences, object, 8000);
+    },
+    undefined,
+    function(e) {
+      console.error(e);
+    }
+  );
 }
