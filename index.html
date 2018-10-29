@@ -6,22 +6,45 @@
     <title>Bestest Game EVAA</title>
     <style>
         body {
+            width: 100%;
+            height: 100%;
             margin: 0;
         }
 
         canvas {
-            border: 1px solid #000000;
+            border: 1px solid black;
+        }
+
+        /* #container {
+            position: relative;
+        } */
+
+        #webglContainer {
+            position: absolute;
+            z-index: 8;
+        }
+
+        #uiContainer {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
         }
     </style>
 </head>
 
 <body>
-    <div id="webgl"></div>
+    <div id="container">
+        <div id="webglContainer"></div>
+        <canvas id="uiContainer" width="500" height="500"></canvas>
+    </div>
+
     <script src="lib/three.min.js"></script>
     <script src="lib/OrbitControls.js"></script>
     <script src="lib/GLTFLoader.js"></script>
 
     <script src="game.js"></script>
+    <script src="ui.js"></script>
+
 </body>
 
 </html>

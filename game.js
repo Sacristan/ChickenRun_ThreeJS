@@ -49,11 +49,12 @@ function init() {
   camera.position.z = 1;
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
+
   renderer.setSize(width, height);
   renderer.setClearColor(0x000000);
   renderer.shadowMap.enabled = true;
 
-  document.getElementById("webgl").appendChild(renderer.domElement);
+  document.getElementById("webglContainer").appendChild(renderer.domElement);
   document.addEventListener("keydown", onKeyDown, false);
   window.addEventListener("resize", onResize, false);
 
@@ -91,7 +92,7 @@ function update() {
 
   baseTexture.offset.y -= 0.025;
 
-  fences.forEach(function(fence) {
+  fences.forEach(function (fence) {
     fence.position.z += 0.01;
 
     if (fence.position.z > fenceReplacementZPos) {
@@ -99,7 +100,7 @@ function update() {
     }
   });
 
-  blockCubes.forEach(function(barrier) {
+  blockCubes.forEach(function (barrier) {
     barrier.position.z += 0.01;
   });
 
@@ -119,7 +120,7 @@ function update() {
     if (!isJumping) checkCollisions();
   }
 
-  requestAnimationFrame(function() {
+  requestAnimationFrame(function () {
     update();
   });
 
@@ -141,7 +142,7 @@ function spawnBarrierUpdate() {
     canSpawnAdditionalBarriers = false;
     createBarrier();
 
-    setTimeout(function() {
+    setTimeout(function () {
       canSpawnAdditionalBarriers = true;
     }, barierSpawnTimeOut);
   }
@@ -229,10 +230,10 @@ function createAvatar() {
   var loader = new THREE.GLTFLoader();
   loader.load(
     "assets/models/chicken.gltf",
-    function(gltf) {
+    function (gltf) {
       var object = gltf.scene;
 
-      object.traverse(function(child) {
+      object.traverse(function (child) {
         if (child.isMesh) {
           child.castShadow = true;
         }
@@ -260,14 +261,14 @@ function createAvatar() {
       avatarInitiated = true;
     },
     undefined,
-    function(e) {
+    function (e) {
       console.error(e);
     }
   );
 }
 
 function cleanupAfter(arr, object, time) {
-  setTimeout(function() {
+  setTimeout(function () {
     arr = arrayRemove(arr, object);
     scene.remove(object);
     object.geometry.dispose();
@@ -316,7 +317,7 @@ function createBasePlane() {
 
 //PHYSICS
 function checkCollisions() {
-  blockCubes.forEach(function(blockCube) {
+  blockCubes.forEach(function (blockCube) {
     blockCube.material.transparent = false;
     blockCube.material.opacity = 1.0;
   });
@@ -358,7 +359,7 @@ function applyMaterialTextureSettings(
   tilingX,
   tilingY
 ) {
-  propertiesMap.forEach(function(mapProperty) {
+  propertiesMap.forEach(function (mapProperty) {
     var tex = material[mapProperty];
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
@@ -367,7 +368,7 @@ function applyMaterialTextureSettings(
 }
 
 function arrayRemove(arr, value) {
-  return arr.filter(function(ele) {
+  return arr.filter(function (ele) {
     return ele != value;
   });
 }
@@ -392,7 +393,7 @@ function createFence(right = true, z) {
   var loader = new THREE.GLTFLoader();
   loader.load(
     "assets/models/fences.gltf",
-    function(gltf) {
+    function (gltf) {
       var object = gltf.scene;
 
       object.rotation.y = Math.PI * 1.5;
@@ -407,7 +408,7 @@ function createFence(right = true, z) {
       // cleanupAfter(fences, object, 8000);
     },
     undefined,
-    function(e) {
+    function (e) {
       console.error(e);
     }
   );
