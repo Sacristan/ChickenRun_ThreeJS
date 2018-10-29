@@ -4,12 +4,13 @@ var camera,
   scene,
   renderer,
   basePlane,
-  avatar,
+  avatarCollisionBox,
   baseTexture,
   orbitControls,
   blockCubes = [],
   animationMixer,
   clock,
+  avatarGroup,
   avatarAnimationAction;
 
 var width, height;
@@ -22,7 +23,9 @@ var avatarInitiated = false;
 
 //CONSTANTS
 const floatTolerance = 0.05;
-const avatarInitYPos = -0.24;
+const avatarModelOffset = -0.09;
+const avatarGroupInitYPos = -0.15;
+const avatarBoxOffset = -0.24;
 const maxJumpYPos = 0.15;
 
 init();
@@ -44,7 +47,6 @@ function init() {
   renderer.shadowMap.enabled = true;
 
   document.getElementById("webgl").appendChild(renderer.domElement);
-  // document.addEventListener('mousedown', onMouseDown);
   document.addEventListener("keydown", onKeyDown, false);
   window.addEventListener("resize", onResize, false);
 
@@ -65,7 +67,7 @@ function buildScene() {
 
 function initAvatarControls() {
   orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-  orbitControls.target = avatar.position;
+  orbitControls.target = avatarGroup.position;
 }
 
 function update() {
@@ -92,6 +94,8 @@ function update() {
     }
 
     orbitControls.update();
+
+    // checkCollisions();
   }
 
   requestAnimationFrame(function() {
@@ -125,10 +129,10 @@ function jump() {
     stopAvatarAtInitPos = false;
     return false;
   }
-
-  avatar.position.y = lerp(avatarInitYPos, maxJumpYPos, t);
-
-  if (Math.round(avatar.position.y * 100) / 100 >= maxJumpYPos) {
+  const y = lerp(avatarGroupInitYPos, maxJumpYPos, t);
+  avatarGroup.position.y = y;
+  //   avatarCollisionBox.position.y = y;
+  if (Math.round(avatarGroup.position.y * 100) / 100 >= maxJumpYPos) {
     stopAvatarAtInitPos = true;
   }
 
@@ -194,8 +198,7 @@ function createAvatar() {
 
       animationMixer = new THREE.AnimationMixer(object);
       avatarAnimationAction = animationMixer.clipAction(gltf.animations[0]);
-      object.position.y = avatarInitYPos;
-      object.position.z = 0.5;
+      object.position.y = avatarModelOffset;
       object.rotation.y = Math.PI;
 
       var scale = 0.05;
@@ -203,8 +206,15 @@ function createAvatar() {
 
       avatarAnimationAction.play();
 
-      avatar = object;
+      avatarGroup = new THREE.Group();
+      avatarGroup.add(object);
+
+      avatarGroup.position.y = avatarGroupInitYPos;
+      avatarGroup.position.z = 0.5;
+
+      createAvatarCollisionBox();
       initAvatarControls();
+      scene.add(avatarGroup);
       avatarInitiated = true;
     },
     undefined,
@@ -212,6 +222,18 @@ function createAvatar() {
       console.error(e);
     }
   );
+}
+
+function createAvatarCollisionBox() {
+  var geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+
+  var material = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.5
+  });
+  avatarCollisionBox = new THREE.Mesh(geometry, material);
+  avatarGroup.add(avatarCollisionBox);
 }
 
 function createBasePlane() {
@@ -241,13 +263,14 @@ function createBasePlane() {
 }
 
 //PHYSICS
-function checkCollision() {
+function checkCollisions() {
   blockCubes.forEach(function(cube) {
     cube.material.transparent = false;
     cube.material.opacity = 1.0;
   });
 
   var originPoint = avatar.position.clone();
+
   for (
     var vertexIndex = 0;
     vertexIndex < avatar.geometry.vertices.length;
