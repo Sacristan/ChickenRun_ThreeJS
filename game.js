@@ -1,27 +1,29 @@
 // 'use strict';
 
 var camera,
-    scene,
-    renderer,
-    basePlane,
-    avatar,
-    baseTexture,
-    orbitControls,
-    blockCubes = [],
-    mixers = []
+  scene,
+  renderer,
+  basePlane,
+  avatar,
+  baseTexture,
+  orbitControls,
+  blockCubes = [],
+  animationMixer,
+  clock,
+  avatarAnimationAction;
 
-var width,
-    height;
+var width, height;
 
 var vAngle = 0;
-var avatarInitYPos = -0.24;
-var maxJumpYPos = 0.15;
-var shouldBeJumping = false;
+
+var isJumping = false;
 var stopAvatarAtInitPos = false;
-var floatTolerance = 0.05;
 var avatarInitiated = false;
 
-var clock;
+//CONSTANTS
+const floatTolerance = 0.05;
+const avatarInitYPos = -0.24;
+const maxJumpYPos = 0.15;
 
 init();
 initScene();
@@ -30,252 +32,268 @@ buildScene();
 update();
 
 function init() {
-    width = window.innerWidth;
-    height = window.innerHeight;
+  width = window.innerWidth;
+  height = window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
-    camera.position.z = 1;
+  camera = new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
+  camera.position.z = 1;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    renderer.setClearColor(0x000000);
-    renderer.shadowMap.enabled = true;
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(width, height);
+  renderer.setClearColor(0x000000);
+  renderer.shadowMap.enabled = true;
 
-    document.getElementById("webgl").appendChild(renderer.domElement);
-    // document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener("keydown", onKeyDown, false);
+  document.getElementById("webgl").appendChild(renderer.domElement);
+  // document.addEventListener('mousedown', onMouseDown);
+  document.addEventListener("keydown", onKeyDown, false);
+  window.addEventListener("resize", onResize, false);
 
-    clock = new THREE.Clock();
+  clock = new THREE.Clock();
 }
 
 function initScene() {
-    scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xffffff, 0.35);
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0xffffff, 0.35);
 }
 
 function buildScene() {
-    createSkybox();
-    createLights();
-    createBasePlane();
-    createBarrier();
+  createSkybox();
+  createLights();
+  createBasePlane();
+  createBarrier();
 }
 
-function initControls() {
-    orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-    if (avatar) orbitControls.target = avatar.position;
+function initAvatarControls() {
+  orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+  orbitControls.target = avatar.position;
 }
 
 function update() {
-    renderer.render(scene, camera);
+  renderer.render(scene, camera);
 
-    baseTexture.offset.y -= 0.025;
+  baseTexture.offset.y -= 0.025;
 
-    if (Math.random() < 0.0025) createBarrier();
+  if (Math.random() < 0.0025) createBarrier();
 
-    blockCubes.forEach(function (barrier) {
-        barrier.position.z += 0.01;
-    })
+  blockCubes.forEach(function(barrier) {
+    barrier.position.z += 0.01;
+  });
 
-    if (shouldBeJumping) {
-        shouldBeJumping = jump();
+  if (avatarInitiated) {
+    if (isJumping) {
+      isJumping = jump();
     }
 
-    if (mixers.length > 0) {
-        for (var i = 0; i < mixers.length; i++) {
-            mixers[i].update(clock.getDelta());
-        }
+    if (avatarAnimationAction.paused != isJumping)
+      avatarAnimationAction.paused = isJumping;
+
+    if (animationMixer) {
+      animationMixer.update(clock.getDelta());
     }
 
-    // checkCollision();
-    if (avatarInitiated) orbitControls.update();
-    requestAnimationFrame(
-        function () {
-            update()
-        }
-    );
+    orbitControls.update();
+  }
+
+  requestAnimationFrame(function() {
+    update();
+  });
 }
 
-// function onResize() {
-//     width = window.innerWidth;
-//     height = window.innerHeight;
-//     camera.aspect = width / height;
-//     camera.updateProjectionMatrix();
-//     renderer.setSize(width, height);
-// }
-
+function onResize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+}
 
 function onKeyDown(event) {
-    var keyCode = event.which;
+  var keyCode = event.which;
 
-    console.log(event.which);
-
-    switch (keyCode) {
-        case 32:
-            shouldBeJumping = true;
-            break;
-    }
+  switch (keyCode) {
+    case 32:
+      isJumping = true;
+      break;
+  }
 }
 
-
 function jump() {
-    vAngle += 0.05;
-    var t = (Math.sin(this.vAngle) / 2) + 0.5;
+  vAngle += 0.05;
+  var t = Math.sin(this.vAngle) / 2 + 0.5;
 
-    if (stopAvatarAtInitPos && t < floatTolerance) {
-        stopAvatarAtInitPos = false;
-        return false;
-    }
+  if (stopAvatarAtInitPos && t < floatTolerance) {
+    stopAvatarAtInitPos = false;
+    return false;
+  }
 
-    avatar.position.y = lerp(avatarInitYPos, maxJumpYPos, t);
+  avatar.position.y = lerp(avatarInitYPos, maxJumpYPos, t);
 
-    if (Math.round(avatar.position.y * 100) / 100 >= maxJumpYPos) {
-        stopAvatarAtInitPos = true;
-    }
+  if (Math.round(avatar.position.y * 100) / 100 >= maxJumpYPos) {
+    stopAvatarAtInitPos = true;
+  }
 
-    return true;
+  return true;
 }
 
 function createSkybox() {
-    scene.background = new THREE.CubeTextureLoader()
-        .setPath('assets/textures/skybox/')
-        .load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg']);
+  scene.background = new THREE.CubeTextureLoader()
+    .setPath("assets/textures/skybox/")
+    .load(["px.jpg", "nx.jpg", "py.jpg", "ny.jpg", "pz.jpg", "nz.jpg"]);
 }
 
 function createLights() {
-    var l = new THREE.DirectionalLight(0xFFFFFF, 1);
-    l.castShadow = true;
-    scene.add(l);
+  var l = new THREE.DirectionalLight(0xffffff, 1);
+  l.castShadow = true;
+  scene.add(l);
 
-    var l = new THREE.AmbientLight(0xFFFF00, 0.5);
-    scene.add(l);
+  var l = new THREE.AmbientLight(0xffff00, 0.5);
+  scene.add(l);
 }
 
 function createBarrier() {
-    var geometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
+  var geometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
 
-    var material = new THREE.MeshPhongMaterial({
-        color: 'rgb(255,255,255)',
-        emissive: 'rgb(255,100,0)'
-    });
+  var material = new THREE.MeshPhongMaterial({
+    color: "rgb(255,255,255)",
+    emissive: "rgb(255,100,0)"
+  });
 
-    var texLoader = new THREE.TextureLoader();
-    var mapTexture = texLoader.load('assets/textures/lava.jpg');
+  var texLoader = new THREE.TextureLoader();
+  var mapTexture = texLoader.load("assets/textures/lava.jpg");
 
-    material.map = mapTexture;
-    material.bumpMap = mapTexture;
+  material.map = mapTexture;
+  material.bumpMap = mapTexture;
 
-    applyMaterialTextureSettings(material, ['map', 'bumpMap'], 5, 1);
+  applyMaterialTextureSettings(material, ["map", "bumpMap"], 5, 1);
 
-    var mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
-    mesh.position.y = -0.2;
-    mesh.position.z = -2;
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.position.y = -0.2;
+  mesh.position.z = -2;
 
+  scene.add(mesh);
+  blockCubes.push(mesh);
 
-    scene.add(mesh);
-    blockCubes.push(mesh);
-
-    setTimeout(function () {
-        blockCubes = arrayRemove(blockCubes, mesh);
-        scene.remove(mesh);
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-        mesh = undefined;
-    }, 5000);
-
+  setTimeout(function() {
+    blockCubes = arrayRemove(blockCubes, mesh);
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+    mesh = undefined;
+  }, 5000);
 }
 
 function createAvatar() {
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    "assets/models/chicken.gltf",
+    function(gltf) {
+      var object = gltf.scene;
 
-    var loader = new THREE.GLTFLoader();
-    loader.load('assets/models/chicken.gltf', function (gltf) {
-        var object = gltf.scene;
+      scene.add(object);
 
-        scene.add(object);
+      animationMixer = new THREE.AnimationMixer(object);
+      avatarAnimationAction = animationMixer.clipAction(gltf.animations[0]);
+      object.position.y = avatarInitYPos;
+      object.position.z = 0.5;
+      object.rotation.y = Math.PI;
 
-        mixer = new THREE.AnimationMixer(object);
-        mixers.push(mixer);
-        var action = mixer.clipAction(gltf.animations[0]);
-        object.position.y = avatarInitYPos;
-        object.position.z = 0.5;
-        object.rotation.y = Math.PI;
+      var scale = 0.05;
+      object.scale.set(scale, scale, scale);
 
-        var scale = 0.05;
-        object.scale.set(scale, scale, scale);
+      avatarAnimationAction.play();
 
-        avatar = object;
-        action.play();
-
-        initControls();
-    }, undefined, function (e) {
-        console.error(e);
-    });
+      avatar = object;
+      initAvatarControls();
+      avatarInitiated = true;
+    },
+    undefined,
+    function(e) {
+      console.error(e);
+    }
+  );
 }
 
 function createBasePlane() {
-    var geometry = new THREE.PlaneGeometry(2, 10);
-    var material = new THREE.MeshLambertMaterial({
-        color: 0xFFFFFF,
-        side: THREE.DoubleSide
-    });
+  var geometry = new THREE.PlaneGeometry(2, 10);
+  var material = new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide
+  });
 
-    var texLoader = new THREE.TextureLoader();
-    baseTexture = texLoader.load('assets/textures/grass.jpg');
+  var texLoader = new THREE.TextureLoader();
+  baseTexture = texLoader.load("assets/textures/grass.jpg");
 
-    material.map = baseTexture;
-    material.bumpMap = baseTexture;
+  material.map = baseTexture;
+  material.bumpMap = baseTexture;
 
-    applyMaterialTextureSettings(material, ['map', 'bumpMap'], 25, 25);
+  applyMaterialTextureSettings(material, ["map", "bumpMap"], 25, 25);
 
-    var mesh = new THREE.Mesh(geometry, material);
-    mesh.name = "basePlane";
-    mesh.position.y = -0.25;
-    mesh.rotation.x = Math.PI / 2;
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "basePlane";
+  mesh.position.y = -0.25;
+  mesh.rotation.x = Math.PI / 2;
 
-    mesh.receiveShadow = true;
+  mesh.receiveShadow = true;
 
-    scene.add(mesh);
-    basePlane = mesh;
+  scene.add(mesh);
+  basePlane = mesh;
 }
 
-function applyMaterialTextureSettings(material, propertiesMap, tilingX, tilingY) {
-
-    propertiesMap.forEach(function (mapProperty) {
-        var tex = material[mapProperty];
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(tilingX, tilingY);
-    });
-}
-
+//PHYSICS
 function checkCollision() {
-    blockCubes.forEach(function (cube) {
-        cube.material.transparent = false;
-        cube.material.opacity = 1.0;
-    });
+  blockCubes.forEach(function(cube) {
+    cube.material.transparent = false;
+    cube.material.opacity = 1.0;
+  });
 
-    var originPoint = avatar.position.clone();
-    for (var vertexIndex = 0; vertexIndex < avatar.geometry.vertices.length; vertexIndex++) {
-        var localVertex = avatar.geometry.vertices[vertexIndex].clone();
-        var globalVertex = localVertex.applyMatrix4(avatar.matrix);
-        var directionVector = globalVertex.sub(avatar.position);
-        var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
-        var collisionResults = ray.intersectObjects(blockCubes);
+  var originPoint = avatar.position.clone();
+  for (
+    var vertexIndex = 0;
+    vertexIndex < avatar.geometry.vertices.length;
+    vertexIndex++
+  ) {
+    var localVertex = avatar.geometry.vertices[vertexIndex].clone();
+    var globalVertex = localVertex.applyMatrix4(avatar.matrix);
+    var directionVector = globalVertex.sub(avatar.position);
+    var ray = new THREE.Raycaster(
+      originPoint,
+      directionVector.clone().normalize()
+    );
+    var collisionResults = ray.intersectObjects(blockCubes);
 
-        if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-            console.log(collisionResults[0].object.name);
-            collisionResults[0].object.material.transparent = true;
-            collisionResults[0].object.material.opacity = 0.4;
-        }
+    if (
+      collisionResults.length > 0 &&
+      collisionResults[0].distance < directionVector.length()
+    ) {
+      console.log(collisionResults[0].object.name);
+      collisionResults[0].object.material.transparent = true;
+      collisionResults[0].object.material.opacity = 0.4;
     }
+  }
+}
+
+//UTILS
+function applyMaterialTextureSettings(
+  material,
+  propertiesMap,
+  tilingX,
+  tilingY
+) {
+  propertiesMap.forEach(function(mapProperty) {
+    var tex = material[mapProperty];
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(tilingX, tilingY);
+  });
 }
 
 function arrayRemove(arr, value) {
-    return arr.filter(function (ele) {
-        return ele != value;
-    });
+  return arr.filter(function(ele) {
+    return ele != value;
+  });
 }
 
 function lerp(a, b, c) {
-    return a + c * (b - a);
+  return a + c * (b - a);
 }
