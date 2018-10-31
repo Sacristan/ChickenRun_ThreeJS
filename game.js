@@ -37,7 +37,7 @@ const minDifficultyBarrierSpawnTime = 5000; //ms
 const maxDifficultyBarrierSpawnTime = 1500; //ms
 var difficultyAccumulator = 0;
 
-const maxLives = 5;
+const maxLives = 1;
 var lives = maxLives;
 
 var c;
@@ -109,7 +109,6 @@ function initAvatarControls() {
 
 function update() {
   renderer.render(scene, camera);
-
   baseTexture.offset.y -= 0.025;
 
   fences.forEach(function (fence) {
@@ -367,34 +366,6 @@ function checkCollisions() {
     addDamage();
   }
 
-  // for (
-  //   var vertexIndex = 0;
-  //   vertexIndex < avatarCollisionBox.geometry.vertices.length;
-  //   vertexIndex++
-  // ) {
-  //   var localVertex = avatarCollisionBox.geometry.vertices[vertexIndex].clone();
-  //   var globalVertex = localVertex.applyMatrix4(avatarCollisionBox.matrix);
-  //   var directionVector = globalVertex.sub(avatarCollisionBox.position);
-  //   var ray = new THREE.Raycaster(
-  //     originPoint,
-  //     directionVector.clone().normalize()
-  //   );
-
-  //   var collisionResults = ray.intersectObjects(blockCubes);
-
-  //   if (
-  //     collisionResults.length > 0 &&
-  //     collisionResults[0].distance < directionVector.length()
-  //   ) {
-  //     console.log(collisionResults[0].object.name);
-
-  //     cleanup(blockCubes, collisionResults[0].object);
-  //     addDamage();
-
-  //     collisionResults[0].object.material.transparent = true;
-  //     collisionResults[0].object.material.opacity = 0.4;
-  //   }
-  // }
 }
 
 //UTILS
@@ -498,9 +469,12 @@ function updateUI() {
 
   if (isGameOver) {
     ctx.beginPath();
+    ctx.fillStyle = "rgb(0, 0, 0)";
 
+    ctx.rect(0, 0, width, height);
+    ctx.fill();
 
-    ctx.drawImage(gameOverImage, 0, 0, width, height);
+    ctx.drawImage(gameOverImage, width, height);
 
     ctx.closePath();
   }
