@@ -43,6 +43,10 @@ var lives = maxLives;
 var c;
 var ctx;
 
+var isGameOver = false;
+
+const gameOverImage = new Image();
+
 init();
 initScene();
 createAvatar();
@@ -73,6 +77,8 @@ function init() {
   window.addEventListener("resize", onResize, false);
 
   clock = new THREE.Clock();
+
+  gameOverImage.src = "assets/textures/gameOver.png";
 }
 
 function initScene() {
@@ -84,7 +90,7 @@ function buildScene() {
   createSkybox();
   createLights();
   createBasePlane();
-  createBarrier();
+  // createBarrier();
   createFences();
 }
 
@@ -168,6 +174,7 @@ function onResize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+  updateUI();
 }
 
 function onKeyDown(event) {
@@ -460,24 +467,41 @@ function createFence(right = true, z) {
   );
 }
 function addDamage() {
-  if (--lives <= 0) gameOver();
+  if (--lives <= 0) isGameOver = true;
   updateUI();
-}
-
-function gameOver() {
 }
 
 //UI
 function updateUI() {
-  ctx.canvas.width = window.innerWidth;
-  ctx.canvas.height = window.innerHeight;
-
-  ctx.beginPath();
+  ctx.canvas.width = width;
+  ctx.canvas.height = height;
 
   var lifePerc = lives / maxLives;
-  ctx.arc(100, 75, 50, 0, 2 * lifePerc * Math.PI);
 
-  ctx.fillStyle = "rgba(0,0, 255, 0.5)";
+  const pos = 120;
+
+  ctx.beginPath();
+  ctx.fillStyle = "rgba(255,0,0, 1)";
+  ctx.arc(pos, pos, 80, 0, Math.PI * 2);
   ctx.fill();
   ctx.closePath();
+
+  ctx.beginPath();
+  ctx.fillStyle = "rgba(0,255, 0, 1)";
+  ctx.moveTo(pos, pos);
+  ctx.arc(pos, pos, 80, 0, Math.PI * 2 * lifePerc);
+  ctx.lineTo(pos, pos);
+
+  ctx.stroke();
+  ctx.fill();
+  ctx.closePath();
+
+  if (isGameOver) {
+    ctx.beginPath();
+
+
+    ctx.drawImage(gameOverImage, 0, 0, width, height);
+
+    ctx.closePath();
+  }
 };
