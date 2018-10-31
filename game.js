@@ -17,6 +17,7 @@ var avatarGroup, avatarCollisionBox, avatarAnimationAction;
 var width, height;
 
 var vAngle = 0;
+var barrierIndex = 0;
 
 var isJumping = false;
 var stopAvatarAtInitPos = false;
@@ -31,15 +32,28 @@ const maxJumpYPos = 0.15;
 const fenceInitZ = -8;
 const fenceReplacementZPos = 2;
 
+const barrierCleanupTime = 8000; //ms
 const minDifficultyBarrierSpawnTime = 5000; //ms
 const maxDifficultyBarrierSpawnTime = 1500; //ms
 var difficultyAccumulator = 0;
+
+const maxLives = 5;
+var lives = maxLives;
+
+var c;
+var ctx;
 
 init();
 initScene();
 createAvatar();
 buildScene();
 update();
+
+window.onload = function () {
+  c = document.getElementById("uiContainer");
+  ctx = c.getContext("2d");
+  updateUI();
+};
 
 function init() {
   width = window.innerWidth;
@@ -199,6 +213,7 @@ function createLights() {
 }
 
 function createBarrier() {
+  barrierIndex++;
   var geometry = new THREE.BoxGeometry(0.5, 0.05, 0.1);
 
   var material = new THREE.MeshPhongMaterial({
@@ -215,7 +230,7 @@ function createBarrier() {
   applyMaterialTextureSettings(material, ["map", "bumpMap"], 5, 1);
 
   var mesh = new THREE.Mesh(geometry, material);
-  mesh.name = "blockBarrier_" + blockCubes.length;
+  mesh.name = "blockBarrier_" + barrierIndex;
   mesh.castShadow = true;
   mesh.position.y = -0.2;
   mesh.position.z = -2;
@@ -223,7 +238,7 @@ function createBarrier() {
   scene.add(mesh);
   blockCubes.push(mesh);
 
-  cleanupAfter(blockCubes, mesh, 5000);
+  cleanupAfter(blockCubes, mesh, barrierCleanupTime);
 }
 
 function createAvatar() {
@@ -269,12 +284,16 @@ function createAvatar() {
 
 function cleanupAfter(arr, object, time) {
   setTimeout(function () {
-    arr = arrayRemove(arr, object);
-    scene.remove(object);
-    object.geometry.dispose();
-    object.material.dispose();
-    object = undefined;
+    cleanup(arr, object);
   }, time);
+}
+
+function cleanup(arr, object) {
+  arr = arrayRemove(arr, object);
+  scene.remove(object);
+  object.geometry.dispose();
+  object.material.dispose();
+  object = undefined;
 }
 
 function createAvatarCollisionBox() {
@@ -317,39 +336,58 @@ function createBasePlane() {
 
 //PHYSICS
 function checkCollisions() {
+  console.log(blockCubes.length);
+
   blockCubes.forEach(function (blockCube) {
     blockCube.material.transparent = false;
     blockCube.material.opacity = 1.0;
   });
 
   var originPoint = avatarCollisionBox.position.clone();
+  originPoint.y -= 0.2;
   originPoint.z += 0.5;
-  originPoint.y += avatarModelOffset;
 
-  for (
-    var vertexIndex = 0;
-    vertexIndex < avatarCollisionBox.geometry.vertices.length;
-    vertexIndex++
-  ) {
-    var localVertex = avatarCollisionBox.geometry.vertices[vertexIndex].clone();
-    var globalVertex = localVertex.applyMatrix4(avatarCollisionBox.matrix);
-    var directionVector = globalVertex.sub(avatarCollisionBox.position);
-    var ray = new THREE.Raycaster(
-      originPoint,
-      directionVector.clone().normalize()
-    );
+  var ray = new THREE.Raycaster(
+    originPoint,
+    new THREE.Vector3(0, 0, -1)
+  );
 
-    var collisionResults = ray.intersectObjects(blockCubes);
+  var collisionResults = ray.intersectObjects(blockCubes);
+  if (collisionResults.length > 0 && collisionResults[0].distance <= floatTolerance) {
+    console.log(collisionResults[0].object.name);
 
-    if (
-      collisionResults.length > 0 &&
-      collisionResults[0].distance < directionVector.length()
-    ) {
-      console.log(collisionResults[0].object.name);
-      collisionResults[0].object.material.transparent = true;
-      collisionResults[0].object.material.opacity = 0.4;
-    }
+    cleanup(blockCubes, collisionResults[0].object);
+    addDamage();
   }
+
+  // for (
+  //   var vertexIndex = 0;
+  //   vertexIndex < avatarCollisionBox.geometry.vertices.length;
+  //   vertexIndex++
+  // ) {
+  //   var localVertex = avatarCollisionBox.geometry.vertices[vertexIndex].clone();
+  //   var globalVertex = localVertex.applyMatrix4(avatarCollisionBox.matrix);
+  //   var directionVector = globalVertex.sub(avatarCollisionBox.position);
+  //   var ray = new THREE.Raycaster(
+  //     originPoint,
+  //     directionVector.clone().normalize()
+  //   );
+
+  //   var collisionResults = ray.intersectObjects(blockCubes);
+
+  //   if (
+  //     collisionResults.length > 0 &&
+  //     collisionResults[0].distance < directionVector.length()
+  //   ) {
+  //     console.log(collisionResults[0].object.name);
+
+  //     cleanup(blockCubes, collisionResults[0].object);
+  //     addDamage();
+
+  //     collisionResults[0].object.material.transparent = true;
+  //     collisionResults[0].object.material.opacity = 0.4;
+  //   }
+  // }
 }
 
 //UTILS
@@ -368,9 +406,17 @@ function applyMaterialTextureSettings(
 }
 
 function arrayRemove(arr, value) {
-  return arr.filter(function (ele) {
-    return ele != value;
-  });
+  var index = -1;
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] === value) {
+      index = i;
+      break;
+    }
+  }
+
+
+  if (index > -1) arr.splice(index, 1);
+  return arr;
 }
 
 function lerp(a, b, c) {
@@ -413,3 +459,25 @@ function createFence(right = true, z) {
     }
   );
 }
+function addDamage() {
+  if (--lives <= 0) gameOver();
+  updateUI();
+}
+
+function gameOver() {
+}
+
+//UI
+function updateUI() {
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
+
+  ctx.beginPath();
+
+  var lifePerc = lives / maxLives;
+  ctx.arc(100, 75, 50, 0, 2 * lifePerc * Math.PI);
+
+  ctx.fillStyle = "rgba(0,0, 255, 0.5)";
+  ctx.fill();
+  ctx.closePath();
+};
