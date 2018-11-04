@@ -1,5 +1,3 @@
-// 'use strict';
-
 var camera,
   scene,
   renderer,
@@ -14,7 +12,7 @@ var camera,
 
 var avatarGroup, avatarCollisionBox, avatarAnimationAction;
 
-var width, height;
+var canvasWidth, canvasHeight;
 
 var vAngle = 0;
 var barrierIndex = 0;
@@ -37,14 +35,16 @@ const minDifficultyBarrierSpawnTime = 5000; //ms
 const maxDifficultyBarrierSpawnTime = 1500; //ms
 var difficultyAccumulator = 0;
 
-const maxLives = 1;
+const maxLives = 5;
 var lives = maxLives;
 
 var c;
 var ctx;
 
 var isGameOver = false;
+var isUIReady = false;
 
+const chickenImage = new Image();
 const gameOverImage = new Image();
 
 init();
@@ -56,19 +56,20 @@ update();
 window.onload = function () {
   c = document.getElementById("uiContainer");
   ctx = c.getContext("2d");
+  isUIReady = true;
   updateUI();
 };
 
 function init() {
-  width = window.innerWidth;
-  height = window.innerHeight;
+  canvasWidth = window.innerWidth;
+  canvasHeight = window.innerHeight;
 
-  camera = new THREE.PerspectiveCamera(70, width / height, 0.01, 1000);
+  camera = new THREE.PerspectiveCamera(70, canvasWidth / canvasHeight, 0.01, 1000);
   camera.position.z = 1;
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
 
-  renderer.setSize(width, height);
+  renderer.setSize(canvasWidth, canvasHeight);
   renderer.setClearColor(0x000000);
   renderer.shadowMap.enabled = true;
 
@@ -78,6 +79,7 @@ function init() {
 
   clock = new THREE.Clock();
 
+  chickenImage.src = "assets/textures/chicken.png"
   gameOverImage.src = "assets/textures/gameOver.png";
 }
 
@@ -139,6 +141,10 @@ function update() {
     if (!isJumping) checkCollisions();
   }
 
+  if (isUIReady && !isGameOver) {
+    updateChickenImg();
+  }
+
   requestAnimationFrame(function () {
     update();
   });
@@ -168,11 +174,11 @@ function spawnBarrierUpdate() {
 }
 
 function onResize() {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  camera.aspect = width / height;
+  canvasWidth = window.innerWidth;
+  canvasHeight = window.innerHeight;
+  camera.aspect = canvasWidth / canvasHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+  renderer.setSize(canvasWidth, canvasHeight);
   updateUI();
 }
 
@@ -342,7 +348,6 @@ function createBasePlane() {
 
 //PHYSICS
 function checkCollisions() {
-  console.log(blockCubes.length);
 
   blockCubes.forEach(function (blockCube) {
     blockCube.material.transparent = false;
@@ -360,8 +365,7 @@ function checkCollisions() {
 
   var collisionResults = ray.intersectObjects(blockCubes);
   if (collisionResults.length > 0 && collisionResults[0].distance <= floatTolerance) {
-    console.log(collisionResults[0].object.name);
-
+    // console.log(collisionResults[0].object.name);
     cleanup(blockCubes, collisionResults[0].object);
     addDamage();
   }
@@ -443,9 +447,26 @@ function addDamage() {
 }
 
 //UI
+function updateChickenImg() {
+  ctx.save();
+
+  const clearArea = 200;
+  const x = canvasWidth - clearArea;
+  const y = 80;
+
+  ctx.translate(x, y);
+  ctx.rotate(45 * Math.sin(clock.elapsedTime) * Math.PI / 180);
+  ctx.translate(-x, -y);
+
+  ctx.clearRect(x, y, clearArea, clearArea);
+  ctx.drawImage(chickenImage, x, y, clearArea / 2, clearArea / 2);
+
+  ctx.restore();
+}
+
 function updateUI() {
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
+  ctx.canvas.width = canvasWidth;
+  ctx.canvas.height = canvasHeight;
 
   var lifePerc = lives / maxLives;
 
@@ -471,10 +492,10 @@ function updateUI() {
     ctx.beginPath();
     ctx.fillStyle = "rgb(0, 0, 0)";
 
-    ctx.rect(0, 0, width, height);
+    ctx.rect(0, 0, canvasWidth, canvasHeight);
     ctx.fill();
 
-    ctx.drawImage(gameOverImage, width, height);
+    ctx.drawImage(gameOverImage, 0, 0, canvasWidth, canvasHeight);
 
     ctx.closePath();
   }
