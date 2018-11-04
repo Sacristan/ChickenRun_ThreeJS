@@ -53,13 +53,6 @@ createAvatar();
 buildScene();
 update();
 
-window.onload = function () {
-  c = document.getElementById("uiContainer");
-  ctx = c.getContext("2d");
-  isUIReady = true;
-  updateUI();
-};
-
 function init() {
   canvasWidth = window.innerWidth;
   canvasHeight = window.innerHeight;
@@ -83,32 +76,34 @@ function init() {
   gameOverImage.src = "assets/textures/gameOver.png";
 }
 
-function initScene() {
-  scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xffffff, 0.35);
+//Callbacks
+window.onload = function () {
+  c = document.getElementById("uiContainer");
+  ctx = c.getContext("2d");
+  isUIReady = true;
+  updateUI();
+};
+
+function onResize() {
+  canvasWidth = window.innerWidth;
+  canvasHeight = window.innerHeight;
+  camera.aspect = canvasWidth / canvasHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(canvasWidth, canvasHeight);
+  updateUI();
 }
 
-function buildScene() {
-  createSkybox();
-  createLights();
-  createBasePlane();
-  // createBarrier();
-  createFences();
+function onKeyDown(event) {
+  var keyCode = event.which;
+
+  switch (keyCode) {
+    case 32:
+      isJumping = true;
+      break;
+  }
 }
 
-function initAvatarControls() {
-  orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-  orbitControls.target = avatarGroup.position;
-  orbitControls.minAzimuthAngle = -Math.PI / 2;
-  orbitControls.maxAzimuthAngle = Math.PI / 2;
-
-  orbitControls.minPolarAngle = -Math.PI / 2;
-  orbitControls.maxPolarAngle = Math.PI / 2;
-
-  orbitControls.enableDamping = false;
-  orbitControls.enableZoom = false;
-}
-
+//GAME LOOP
 function update() {
   renderer.render(scene, camera);
   baseTexture.offset.y -= 0.025;
@@ -152,6 +147,48 @@ function update() {
   spawnBarrierUpdate();
 }
 
+
+//INITIALISION
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0xffffff, 0.35);
+}
+
+function buildScene() {
+  createSkybox();
+  createLights();
+  createBasePlane();
+  createFences();
+}
+
+function initAvatarControls() {
+  orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+  orbitControls.target = avatarGroup.position;
+  orbitControls.minAzimuthAngle = -Math.PI / 2;
+  orbitControls.maxAzimuthAngle = Math.PI / 2;
+
+  orbitControls.minPolarAngle = -Math.PI / 2;
+  orbitControls.maxPolarAngle = Math.PI / 2;
+
+  orbitControls.enableDamping = false;
+  orbitControls.enableZoom = false;
+}
+
+function createSkybox() {
+  scene.background = new THREE.CubeTextureLoader()
+    .setPath("assets/textures/skybox/")
+    .load(["px.jpg", "nx.jpg", "py.jpg", "ny.jpg", "pz.jpg", "nz.jpg"]);
+}
+
+function createLights() {
+  var l = new THREE.DirectionalLight(0xffffff, 1);
+  l.castShadow = true;
+  scene.add(l);
+
+  var l = new THREE.AmbientLight(0xffff00, 0.5);
+  scene.add(l);
+}
+
 function spawnBarrierUpdate() {
   if (difficultyAccumulator < 1) {
     difficultyAccumulator += clock.getDelta() / 2;
@@ -173,56 +210,7 @@ function spawnBarrierUpdate() {
   }
 }
 
-function onResize() {
-  canvasWidth = window.innerWidth;
-  canvasHeight = window.innerHeight;
-  camera.aspect = canvasWidth / canvasHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(canvasWidth, canvasHeight);
-  updateUI();
-}
 
-function onKeyDown(event) {
-  var keyCode = event.which;
-
-  switch (keyCode) {
-    case 32:
-      isJumping = true;
-      break;
-  }
-}
-
-function jump() {
-  vAngle += 0.05;
-  var t = Math.sin(this.vAngle) / 2 + 0.5;
-
-  if (stopAvatarAtInitPos && t < floatTolerance) {
-    stopAvatarAtInitPos = false;
-    return false;
-  }
-  const y = lerp(avatarGroupInitYPos, maxJumpYPos, t);
-  avatarGroup.position.y = y;
-  if (Math.round(avatarGroup.position.y * 100) / 100 >= maxJumpYPos) {
-    stopAvatarAtInitPos = true;
-  }
-
-  return true;
-}
-
-function createSkybox() {
-  scene.background = new THREE.CubeTextureLoader()
-    .setPath("assets/textures/skybox/")
-    .load(["px.jpg", "nx.jpg", "py.jpg", "ny.jpg", "pz.jpg", "nz.jpg"]);
-}
-
-function createLights() {
-  var l = new THREE.DirectionalLight(0xffffff, 1);
-  l.castShadow = true;
-  scene.add(l);
-
-  var l = new THREE.AmbientLight(0xffff00, 0.5);
-  scene.add(l);
-}
 
 function createBarrier() {
   barrierIndex++;
@@ -294,18 +282,41 @@ function createAvatar() {
   );
 }
 
-function cleanupAfter(arr, object, time) {
-  setTimeout(function () {
-    cleanup(arr, object);
-  }, time);
+
+function createFences() {
+  let z = fenceInitZ;
+
+  for (var i = 0; i < 12; i++) {
+    z += 0.7;
+
+    createFence(true, z);
+    createFence(false, z);
+  }
 }
 
-function cleanup(arr, object) {
-  arr = arrayRemove(arr, object);
-  scene.remove(object);
-  object.geometry.dispose();
-  object.material.dispose();
-  object = undefined;
+function createFence(right = true, z) {
+  var loader = new THREE.GLTFLoader();
+  loader.load(
+    "assets/models/fences.gltf",
+    function (gltf) {
+      var object = gltf.scene;
+
+      object.rotation.y = Math.PI * 1.5;
+      object.scale.set(0.3, 0.3, 0.3);
+      object.position.x = 0.7 * right ? 1 : -1;
+      object.position.y = -0.25;
+      object.position.z = z;
+
+      fences.push(object);
+
+      scene.add(object);
+      // cleanupAfter(fences, object, 8000);
+    },
+    undefined,
+    function (e) {
+      console.error(e);
+    }
+  );
 }
 
 function createAvatarCollisionBox() {
@@ -346,7 +357,7 @@ function createBasePlane() {
   basePlane = mesh;
 }
 
-//PHYSICS
+//PHYSICS AND DAMAGE
 function checkCollisions() {
 
   blockCubes.forEach(function (blockCube) {
@@ -371,6 +382,30 @@ function checkCollisions() {
   }
 
 }
+
+function addDamage() {
+  if (--lives <= 0) isGameOver = true;
+  updateUI();
+}
+
+//ACTIONS
+function jump() {
+  vAngle += 0.05;
+  var t = Math.sin(this.vAngle) / 2 + 0.5;
+
+  if (stopAvatarAtInitPos && t < floatTolerance) {
+    stopAvatarAtInitPos = false;
+    return false;
+  }
+  const y = lerp(avatarGroupInitYPos, maxJumpYPos, t);
+  avatarGroup.position.y = y;
+  if (Math.round(avatarGroup.position.y * 100) / 100 >= maxJumpYPos) {
+    stopAvatarAtInitPos = true;
+  }
+
+  return true;
+}
+
 
 //UTILS
 function applyMaterialTextureSettings(
@@ -405,45 +440,18 @@ function lerp(a, b, c) {
   return a + c * (b - a);
 }
 
-//FENCES
-function createFences() {
-  let z = fenceInitZ;
-
-  for (var i = 0; i < 12; i++) {
-    z += 0.7;
-
-    createFence(true, z);
-    createFence(false, z);
-  }
+function cleanupAfter(arr, object, time) {
+  setTimeout(function () {
+    cleanup(arr, object);
+  }, time);
 }
 
-function createFence(right = true, z) {
-  var loader = new THREE.GLTFLoader();
-  loader.load(
-    "assets/models/fences.gltf",
-    function (gltf) {
-      var object = gltf.scene;
-
-      object.rotation.y = Math.PI * 1.5;
-      object.scale.set(0.3, 0.3, 0.3);
-      object.position.x = 0.7 * right ? 1 : -1;
-      object.position.y = -0.25;
-      object.position.z = z;
-
-      fences.push(object);
-
-      scene.add(object);
-      // cleanupAfter(fences, object, 8000);
-    },
-    undefined,
-    function (e) {
-      console.error(e);
-    }
-  );
-}
-function addDamage() {
-  if (--lives <= 0) isGameOver = true;
-  updateUI();
+function cleanup(arr, object) {
+  arr = arrayRemove(arr, object);
+  scene.remove(object);
+  object.geometry.dispose();
+  object.material.dispose();
+  object = undefined;
 }
 
 //UI
